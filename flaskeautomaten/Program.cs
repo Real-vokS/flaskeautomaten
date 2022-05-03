@@ -58,7 +58,7 @@ namespace flaskeautomaten
                     Monitor.PulseAll(beerQueue);
                 }
                 Monitor.Exit(beerQueue);
-                Thread.Sleep(1000);
+                Thread.Sleep(100 / 15);
             }
         }
         static void SodaConsumer()
@@ -72,7 +72,7 @@ namespace flaskeautomaten
                     Monitor.PulseAll(sodaQueue);
                 }
                 Monitor.Exit(sodaQueue);
-                Thread.Sleep(1000);
+                Thread.Sleep(100 / 15);
             }
         }
 
@@ -80,11 +80,9 @@ namespace flaskeautomaten
         {
             while (true)
             {
-                Monitor.Enter(queue);
-                Monitor.Enter(beerQueue);
-                Monitor.Enter(sodaQueue);
                 if (beerQueue.Count < MaxQueueSize && sodaQueue.Count < MaxQueueSize)
                 {
+                    Monitor.Enter(queue);
                     if (queue.TryDequeue(out string result))
                     {
                         if (result.Contains("Beer"))
@@ -98,17 +96,31 @@ namespace flaskeautomaten
                             sodaQueue.Enqueue(result);
                             Monitor.PulseAll(queue);
                         }
+                        Console.WriteLine("moved bottle");
                     }
-                    Thread.Sleep(100 / 15);
+                    Monitor.Exit(queue);
                 }
                 else
                 {
-                    Monitor.Wait(sodaQueue);
-                    Monitor.Wait(beerQueue);
+                    Console.WriteLine("waiting for room splitter");
+
+                    Monitor.Enter(beerQueue);
+                    if (beerQueue.Count >= MaxQueueSize)
+                    {
+                        Monitor.Wait(beerQueue);
+
+                    }
+                    Monitor.Exit(beerQueue);
+
+                    Monitor.Enter(sodaQueue);
+                    if (sodaQueue.Count >= MaxQueueSize)
+                    {
+                        Monitor.Wait(sodaQueue);
+                    }
+                    Monitor.Exit(sodaQueue);
                 }
-                Monitor.Exit(beerQueue);
-                Monitor.Exit(sodaQueue);
-                Monitor.Exit(queue);
+
+                Thread.Sleep(100 / 15);
             }
 
 
@@ -132,9 +144,11 @@ namespace flaskeautomaten
                         queue.Enqueue("Beer" + beerLabel);
                         beerLabel++;
                     }
+                    Console.WriteLine("added bottle");
                 }
                 else
                 {
+                    Console.WriteLine("Waiting for room");
                     Monitor.Wait(queue);
                 }
                 Monitor.Exit(queue);
