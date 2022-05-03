@@ -81,40 +81,34 @@ namespace flaskeautomaten
             while (true)
             {
                 Monitor.Enter(queue);
-                if (queue.TryDequeue(out string result))
+                Monitor.Enter(beerQueue);
+                Monitor.Enter(sodaQueue);
+                if (beerQueue.Count < MaxQueueSize && sodaQueue.Count < MaxQueueSize)
                 {
-                    Monitor.Enter(beerQueue);
-                    Monitor.Enter(sodaQueue);
-                    if (beerQueue.Count < MaxQueueSize)
+                    if (queue.TryDequeue(out string result))
                     {
                         if (result.Contains("Beer"))
                         {
                             beerQueue.Enqueue(result);
                             Monitor.PulseAll(queue);
                         }
-                    }
-                    else
-                    {
-                        Monitor.Wait(beerQueue);
-                    }
-                    Monitor.Exit(beerQueue);
 
-                    if (sodaQueue.Count < MaxQueueSize)
-                    {
                         if (result.Contains("Soda"))
                         {
                             sodaQueue.Enqueue(result);
                             Monitor.PulseAll(queue);
                         }
                     }
-                    else
-                    {
-                        Monitor.Wait(sodaQueue);
-                    }
-                    Monitor.Exit(sodaQueue);
+                    Thread.Sleep(100 / 15);
                 }
+                else
+                {
+                    Monitor.Wait(sodaQueue);
+                    Monitor.Wait(beerQueue);
+                }
+                Monitor.Exit(beerQueue);
+                Monitor.Exit(sodaQueue);
                 Monitor.Exit(queue);
-
             }
 
 
@@ -144,6 +138,7 @@ namespace flaskeautomaten
                     Monitor.Wait(queue);
                 }
                 Monitor.Exit(queue);
+                Thread.Sleep(100 / 15);
             }
         }
     }
